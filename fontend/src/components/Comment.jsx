@@ -10,6 +10,7 @@ export default function Comment({ comment, postId, currentUser, isReply = false 
   const [likes, setLikes] = useState(comment.likes || []);
   const [showLikes, setShowLikes] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleLike = async () => {
     try {
@@ -35,15 +36,20 @@ export default function Comment({ comment, postId, currentUser, isReply = false 
       }
     } catch (err) {
       console.error(err);
+      setError("Failed to like comment");
     }
   };
 
   const handleReplySubmit = async (e) => {
     e.preventDefault();
     
-    if (!replyContent.trim()) return;
+    if (!replyContent.trim()) {
+      setError("Please write a reply");
+      return;
+    }
 
     setLoading(true);
+    setError("");
 
     try {
       const token = localStorage.getItem("token");
@@ -63,7 +69,7 @@ export default function Comment({ comment, postId, currentUser, isReply = false 
       setShowReplyForm(false);
     } catch (err) {
       console.error(err);
-      alert("Failed to add reply");
+      setError("Failed to add reply. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -77,10 +83,13 @@ export default function Comment({ comment, postId, currentUser, isReply = false 
       await api.delete(`/api/comments/${comment.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      
+      // Instead of refreshing the page, we should notify the parent component
+      // to remove this comment from the list
       window.location.reload(); // Simple refresh for now
     } catch (err) {
       console.error(err);
-      alert("Failed to delete comment");
+      setError("Failed to delete comment");
     }
   };
 
@@ -92,90 +101,157 @@ export default function Comment({ comment, postId, currentUser, isReply = false 
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    return date.toLocaleDateString();
   };
 
   return (
-    <div className={`_comment ${isReply ? '_reply' : ''}`}>
-      <div className="_comment_header">
-        <img src="/assets/images/profile.png" alt="Profile" className="_comment_avatar" />
-        <div className="_comment_content">
-          <div className="_comment_user_info">
-            <h6 className="_comment_username">
-              {comment.user.first_name} {comment.user.last_name}
-            </h6>
-            <span className="_comment_time">{formatDate(comment.created_at)}</span>
+    <div className={`mb-3 ${isReply ? 'ms-4' : ''}`}>
+      <div className="d-flex">
+        {/* User avatar */}
+        <div className="me-2">
+          <img 
+            src="/assets/images/profile.png" 
+            alt={`${comment.user.first_name} ${comment.user.last_name}`}
+            className="rounded-circle"
+            style={{ width: '36px', height: '36px', objectFit: 'cover' }}
+          />
+        </div>
+        
+        {/* Comment content */}
+        <div className="flex-grow-1">
+          <div className="card bg-light border-0">
+            <div className="card-body py-2 px-3">
+              <div className="d-flex justify-content-between">
+                <div>
+                  <h6 className="mb-0 fw-bold">
+                    {comment.user.first_name} {comment.user.last_name}
+                  </h6>
+                  <small className="text-muted">{formatDate(comment.created_at)}</small>
+                </div>
+                {currentUser && currentUser.id === comment.user.id && (
+                  <button 
+                    className="btn btn-sm p-0" 
+                    onClick={handleDelete}
+                    aria-label="Delete comment"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-trash text-muted" viewBox="0 0 16 16">
+                      <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                      <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
+              <p className="mb-1 mt-1">{comment.content}</p>
+            </div>
           </div>
-          <p className="_comment_text">{comment.content}</p>
           
-          <div className="_comment_actions">
+          {/* Error message */}
+          {error && (
+            <div className="alert alert-danger alert-dismissible fade show mt-2 py-1 px-2 small" role="alert">
+              {error}
+              <button 
+                type="button" 
+                className="btn-close" 
+                data-bs-dismiss="alert" 
+                aria-label="Close"
+                onClick={() => setError("")}
+              ></button>
+            </div>
+          )}
+          
+          {/* Action buttons */}
+          <div className="d-flex align-items-center mt-1">
             <button
-              className={`_comment_action_btn ${isLiked ? '_liked' : ''}`}
+              className={`btn btn-sm me-2 ${isLiked ? 'text-primary' : 'text-muted'}`}
               onClick={handleLike}
+              aria-label={isLiked ? "Unlike comment" : "Like comment"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-heart-fill" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15-7.534 4.736 3.562-3.248 8 1.314z"/>
               </svg>
-              {isLiked ? 'Unlike' : 'Like'}
+              <span className="ms-1">{likesCount}</span>
             </button>
-            
-            {likesCount > 0 && (
-              <button
-                className="_comment_action_btn"
-                onClick={() => setShowLikes(!showLikes)}
-              >
-                {likesCount} {likesCount === 1 ? 'Like' : 'Likes'}
-              </button>
-            )}
             
             {!isReply && (
               <button
-                className="_comment_action_btn"
+                className="btn btn-sm text-muted"
                 onClick={() => setShowReplyForm(!showReplyForm)}
+                aria-expanded={showReplyForm}
+                aria-label="Reply to comment"
               >
-                Reply
-              </button>
-            )}
-            
-            {currentUser && currentUser.id === comment.user.id && (
-              <button className="_comment_action_btn _delete" onClick={handleDelete}>
-                Delete
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-reply-fill" viewBox="0 0 16 16">
+                  <path d="M5.921 11.9 1.353 8.62a.719.719 0 0 1 0-1.238L5.921 4.1A.716.716 0 0 1 7 4.719V6c1.5 0 6 0 7 8-2.5-4.5-7-4-7-4v1.281c0 .56-.606.898-1.079.62z"/>
+                </svg>
+                <span className="ms-1">Reply</span>
               </button>
             )}
           </div>
           
+          {/* Likes list */}
           {showLikes && likes.length > 0 && (
-            <div className="_likes_list _mar_t10">
-              <small>Liked by: {likes.map(like => like.name).join(', ')}</small>
+            <div className="mt-2 small text-muted">
+              Liked by: {likes.map(like => like.name).join(', ')}
             </div>
           )}
         </div>
       </div>
-
+      
+      {/* Reply form */}
       {showReplyForm && (
-        <form onSubmit={handleReplySubmit} className="_reply_form _mar_t10 _mar_l40">
-          <div className="_comment_input_group">
-            <img src="/assets/images/profile.png" alt="Profile" className="_comment_avatar" />
-            <input
-              type="text"
-              className="form-control _comment_input"
-              placeholder="Write a reply..."
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="btn btn-sm _btn1"
-              disabled={loading || !replyContent.trim()}
-            >
-              {loading ? "..." : "Reply"}
-            </button>
-          </div>
-        </form>
+        <div className="mt-2 ms-5">
+          <form onSubmit={handleReplySubmit}>
+            <div className="d-flex align-items-start gap-2">
+              <img 
+                src="/assets/images/profile.png" 
+                alt="Your profile" 
+                className="rounded-circle" 
+                style={{ width: '32px', height: '32px', objectFit: 'cover' }}
+              />
+              <div className="flex-grow-1">
+                <div className="input-group">
+                  <input
+                    type="text"
+                    className="form-control rounded-pill px-3"
+                    placeholder="Write a reply..."
+                    value={replyContent}
+                    onChange={(e) => {
+                      setReplyContent(e.target.value);
+                      if (error) setError(""); // Clear error when user types
+                    }}
+                    disabled={loading}
+                    style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: error ? '1px solid #dc3545' : '1px solid #e9ecef',
+                      paddingRight: '80px'
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary rounded-pill position-absolute end-0 me-2"
+                    style={{ zIndex: 10 }}
+                    disabled={loading || !replyContent.trim()}
+                  >
+                    {loading ? (
+                      <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    ) : (
+                      "Post"
+                    )}
+                  </button>
+                </div>
+                
+                {/* Character counter and error message */}
+                <div className="d-flex justify-content-between mt-1">
+                  <small className="text-muted">{replyContent.length}/500</small>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
       )}
-
+      
+      {/* Replies */}
       {replies.length > 0 && (
-        <div className="_replies _mar_l40 _mar_t10">
+        <div className="mt-2">
           {replies.map((reply) => (
             <Comment
               key={reply.id}
