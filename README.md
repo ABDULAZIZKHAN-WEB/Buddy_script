@@ -101,7 +101,7 @@ GET  /api/user           - Get current user (auth)
 ### Posts
 ```
 GET    /api/posts        - Get all posts
-POST   /api/posts        - Create post (with image)
+POST   /api/posts        - Create post (with image/video)
 DELETE /api/posts/{id}   - Delete post
 ```
 
@@ -145,8 +145,9 @@ POST /api/likes/toggle   - Toggle like on post/comment
 ### 1. Create Posts
 - Write text content
 - Upload images (with preview)
+- Upload videos (with preview)
 - Choose public or private visibility
-- Images stored in Laravel storage
+- Images and videos stored in Laravel storage in post-specific folders
 
 ### 2. Interactions
 - Like/unlike posts, comments, and replies
@@ -258,7 +259,7 @@ The React components are based on the HTML designs in the `design/` folder. All 
 ## 📊 Database Schema
 
 - **users**: id, first_name, last_name, email, password
-- **posts**: id, user_id, content, image, visibility
+- **posts**: id, user_id, content, image, video, visibility
 - **comments**: id, user_id, post_id, parent_id, content
 - **likes**: id, user_id, likeable_type, likeable_id (polymorphic)
 

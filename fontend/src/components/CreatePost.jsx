@@ -4,7 +4,9 @@ import api from "../api/axios";
 export default function CreatePost({ onPostCreated, user }) {
   const [content, setContent] = useState("");
   const [image, setImage] = useState(null);
+  const [video, setVideo] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
   const [visibility, setVisibility] = useState("public");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +32,27 @@ export default function CreatePost({ onPostCreated, user }) {
     }
   };
 
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.match('video.*')) {
+        setError("Please select a valid video file");
+        return;
+      }
+      
+      // Validate file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Video size should be less than 10MB");
+        return;
+      }
+      
+      setVideo(file);
+      setVideoPreview(URL.createObjectURL(file));
+      setError(""); // Clear any previous errors
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -49,6 +72,9 @@ export default function CreatePost({ onPostCreated, user }) {
       if (image) {
         formData.append("image", image);
       }
+      if (video) {
+        formData.append("video", video);
+      }
 
       const res = await api.post("/api/posts", formData, {
         headers: {
@@ -60,7 +86,9 @@ export default function CreatePost({ onPostCreated, user }) {
       onPostCreated(res.data);
       setContent("");
       setImage(null);
+      setVideo(null);
       setImagePreview(null);
+      setVideoPreview(null);
       setVisibility("public");
     } catch (err) {
       console.error(err);
@@ -74,7 +102,17 @@ export default function CreatePost({ onPostCreated, user }) {
     setImage(null);
     setImagePreview(null);
     // Reset the file input
-    const fileInput = document.querySelector('input[type="file"]');
+    const fileInput = document.querySelector('input[type="file"][accept="image/*"]');
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  const removeVideo = () => {
+    setVideo(null);
+    setVideoPreview(null);
+    // Reset the file input
+    const fileInput = document.querySelector('input[type="file"][accept="video/*"]');
     if (fileInput) {
       fileInput.value = "";
     }
@@ -96,13 +134,13 @@ export default function CreatePost({ onPostCreated, user }) {
               <h6 className="mb-0">{user ? `${user.first_name} ${user.last_name}` : 'User'}</h6>
               <div className="d-flex align-items-center">
                 <select
-                  className="form-select form-select-sm w-auto border-0 bg-light rounded-pill px-2 py-1"
+                  className="form-select form-select-sm w-auto border-0 bg-light rounded-pill px-3 py-1 pe-4"
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value)}
                   aria-label="Post visibility"
                 >
-                  <option value="public">Public</option>
-                  <option value="private">Private</option>
+                  <option value="public">🌍 Public</option>
+                  <option value="private">🔒 Private</option>
                 </select>
               </div>
             </div>
@@ -134,6 +172,28 @@ export default function CreatePost({ onPostCreated, user }) {
                 className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
                 onClick={removeImage}
                 aria-label="Remove image"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+              </button>
+            </div>
+          )}
+
+          {/* Video preview */}
+          {videoPreview && (
+            <div className="mb-3 position-relative">
+              <video 
+                src={videoPreview} 
+                controls
+                className="img-fluid rounded"
+                style={{ maxHeight: '300px' }}
+              />
+              <button
+                type="button"
+                className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle"
+                onClick={removeVideo}
+                aria-label="Remove video"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
@@ -174,16 +234,19 @@ export default function CreatePost({ onPostCreated, user }) {
                 </svg>
               </label>
               
-              <button 
-                type="button" 
-                className="btn btn-light rounded-circle p-2 me-2"
-                aria-label="Add video"
-                disabled
-              >
+              <label className="btn btn-light rounded-circle me-2 p-2" style={{ cursor: 'pointer' }}>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoChange}
+                  style={{ display: "none" }}
+                  disabled={loading}
+                  aria-label="Add video"
+                />
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                   <path d="M0 1a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V1zm4 0v6h8V1H4zm8 8v6h.5a.5.5 0 0 0 .5-.5V9h-1zm-1 2.5v3h-5v-3h5zm-7 3H3V9h1v6zm-2-7V2h1v1h10V2h1v4H2z"/>
                 </svg>
-              </button>
+              </label>
             </div>
 
             <div className="d-flex align-items-center">
@@ -193,7 +256,7 @@ export default function CreatePost({ onPostCreated, user }) {
               <button
                 type="submit"
                 className="btn btn-primary rounded-pill px-4"
-                disabled={loading || (!content.trim() && !image)}
+                disabled={loading || (!content.trim() && !image && !video)}
               >
                 {loading ? (
                   <>
