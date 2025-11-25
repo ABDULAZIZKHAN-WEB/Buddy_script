@@ -174,8 +174,8 @@ export default function PostCard({ post, currentUser, onDelete, onUpdate }) {
                       aria-label="Post visibility"
                       disabled={loading}
                     >
-                      <option value="public">🌍 Public</option>
-                      <option value="private">🔒 Private</option>
+                      <option value="public">  Public</option>
+                      <option value="private">  Private</option>
                     </select>
                   </div>
                 </div>
